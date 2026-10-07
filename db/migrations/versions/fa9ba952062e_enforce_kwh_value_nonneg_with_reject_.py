@@ -42,5 +42,5 @@ def downgrade() -> None:
        SELECT meter_id, reading_ts, raw_kwh_value::numeric, status, NULL
        FROM readings_rejects WHERE reason = 'invalid_kwh_value'
        """)
-
+    
     op.execute("DELETE FROM readings_rejects WHERE reason = 'invalid_kwh_value'")
