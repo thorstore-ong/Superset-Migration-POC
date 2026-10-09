@@ -75,6 +75,7 @@ def inject_messy_data(rows, rng):
 
     # Malformed rows
     bad_idx = rng.sample(range(len(rows)), 8)
+    print(f"DEBUG: Injecting {len(bad_idx)} malformed rows")
     modes = ["null", "negative", "sentinal", "bad_timestamp"]
     for n, i in enumerate(bad_idx):
         r, mode = rows[i], modes[n % 4]
@@ -105,7 +106,7 @@ def inject_messy_data(rows, rng):
                 dup["kwh_value"] = round(dup["kwh_value"] * 1.1 + 1, 3)
             late.append(dup)
 
-        return rows + late, manifest
+    return rows + late, manifest
 
 
 
