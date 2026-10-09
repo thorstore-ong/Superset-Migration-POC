@@ -72,7 +72,7 @@ def validate_and_load(batch_id: str):
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT id, meter_id, reading_ts, kwh_value, status FROM readings_staging WHERE batch_id = %s",
+        "SELECT id, meter_id, reading_ts, kwh_value, status FROM readings_staging WHERE batch_id = %s ORDER BY id",
         (batch_id,),
     )
     rows = cur.fetchall()
