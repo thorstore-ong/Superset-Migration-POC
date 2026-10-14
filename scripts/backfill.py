@@ -215,7 +215,7 @@ def run_backfill(batch_id: str) -> int:
     conn.commit()
 
     if not rows:
-        log.error("no staginf rows for batch_id=%s", batch_id)
+        log.error("no staging rows for batch_id=%s", batch_id)
         conn.close()
         return 1
 
@@ -223,7 +223,7 @@ def run_backfill(batch_id: str) -> int:
     for row in rows:
         chunks[chunk_key(row[1], row[2])].append(row)
 
-    totals = {"read": 0, "accepted": 0, "updated": 0, "rejected": 0, "skipped": 0, "failed": 0}
+    totals = {"read": 0, "accepted": 0, "updated": 0, "rejected": 0, "succeeded": 0, "skipped": 0, "failed": 0}
     for meter_id, chunk_start, chunk_end in sorted(chunks):
         chunk_rows = chunks[(meter_id, chunk_start, chunk_end)]
         day = chunk_start.date()
@@ -245,17 +245,26 @@ def run_backfill(batch_id: str) -> int:
         totals["read"] += len(chunk_rows)
         for k in ("accepted", "updated", "rejected"):
             totals[k] += counts[k]
+        totals["succeeded"] += 1
         log.info(
             "chunk meter=%s day=%s status=succeeded read=%s accepted=%s updated=%s rejected=%s ms=%s",
             meter_id, day, len(chunk_rows), counts["accepted"], counts["updated"], counts["rejected"], ms,
         )
     conn.close()
+    
     log.info(
-            "done batch_id=%s chunks=%s skipped=%s failed=%s read=%s accepted=%s updated=%s rejected=%s",
-             batch_id, len(chunks), totals["skipped"], totals["failed"], totals["read"],
-             totals["accepted"], totals["updated"], totals["rejected"],
-        )
-    return 1 if totals["failed"] else 0 
+        "done batch_id=%s chunks=%s succeeded=%s skipped=%s failed=%s read=%s accepted=%s updated=%s rejected=%s",
+        batch_id, len(chunks), totals["succeeded"], totals["skipped"], totals["failed"], totals["read"],
+        totals["accepted"], totals["updated"], totals["rejected"],
+    )
+
+    accounted = totals["succeeded"] + totals["skipped"] + totals["failed"]
+    if accounted != len(chunks):
+        log.error("reconciliation failed: %s of %s chunks accounted for", accounted, len(chunks))
+        return 1
+
+    return 1 if totals["failed"] else 0
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
