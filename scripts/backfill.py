@@ -194,6 +194,7 @@ def process_chunk(conn, run_id, rows):
         conn.commit()
         return counts
     except Exception as e:
+        log.exception("chunk run_id=%s failed", run_id)
         conn.rollback()
         cur = conn.cursor()
         cur.execute(
@@ -250,7 +251,6 @@ def run_backfill(batch_id: str) -> int:
             "chunk meter=%s day=%s status=succeeded read=%s accepted=%s updated=%s rejected=%s ms=%s",
             meter_id, day, len(chunk_rows), counts["accepted"], counts["updated"], counts["rejected"], ms,
         )
-    conn.close()
     
     log.info(
         "done batch_id=%s chunks=%s succeeded=%s skipped=%s failed=%s read=%s accepted=%s updated=%s rejected=%s",
@@ -261,9 +261,17 @@ def run_backfill(batch_id: str) -> int:
     accounted = totals["succeeded"] + totals["skipped"] + totals["failed"]
     if accounted != len(chunks):
         log.error("reconciliation failed: %s of %s chunks accounted for", accounted, len(chunks))
-        return 1
+    ok = accounted == len(chunks) and totals["failed"] == 0
 
-    return 1 if totals["failed"] else 0
+    # Staging is only needed to resume. Once every chunk is done, the batch is dead weight.
+    if ok:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM readings_staging WHERE batch_id = %s", (batch_id,))
+        log.info("cleanup deleted %s staging rows for batch_id=%s", cur.rowcount, batch_id)
+        conn.commit()
+
+    conn.close()
+    return 0 if ok else 1
     
 
 if __name__ == "__main__":
