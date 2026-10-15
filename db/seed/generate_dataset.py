@@ -75,7 +75,6 @@ def inject_messy_data(rows, rng):
 
     # Malformed rows
     bad_idx = rng.sample(range(len(rows)), 8)
-    print(f"DEBUG: Injecting {len(bad_idx)} malformed rows")
     modes = ["null", "negative", "sentinal", "bad_timestamp"]
     for n, i in enumerate(bad_idx):
         r, mode = rows[i], modes[n % 4]
@@ -92,19 +91,19 @@ def inject_messy_data(rows, rng):
             r["reading_ts"] = "2026-13-45T99:00:00+00:00"  # invalid timestamp
 
         # Duplicates: appended at the END of the file to mimic late arrival
-        clean_idx = [i for i in range(len(rows)) if i not in set(bad_idx)]
-        late = []
-        for n, i in enumerate(rng.sample(clean_idx, 15)):
-            dup = dict(rows[i])
-            key = {"meter_id": dup["meter_id"], "reading_ts": dup["reading_ts"].isoformat()}
-            if n < 10:
-                manifest["exact_duplicates"].append(key)
-            else:
-                manifest["conflicting_duplicates"].append(
-                    {**key, "first_value": dup["kwh_value"], "later_value": round(dup["kwh_value"] * 1.1 + 1, 3)}
-                )
-                dup["kwh_value"] = round(dup["kwh_value"] * 1.1 + 1, 3)
-            late.append(dup)
+    clean_idx = [i for i in range(len(rows)) if i not in set(bad_idx)]
+    late = []
+    for n, i in enumerate(rng.sample(clean_idx, 15)):
+        dup = dict(rows[i])
+        key = {"meter_id": dup["meter_id"], "reading_ts": dup["reading_ts"].isoformat()}
+        if n < 10:
+            manifest["exact_duplicates"].append(key)
+        else:
+            manifest["conflicting_duplicates"].append(
+                {**key, "first_value": dup["kwh_value"], "later_value": round(dup["kwh_value"] * 1.1 + 1, 3)}
+            )
+            dup["kwh_value"] = round(dup["kwh_value"] * 1.1 + 1, 3)
+        late.append(dup)
 
     return rows + late, manifest
 
