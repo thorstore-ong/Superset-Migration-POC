@@ -30,28 +30,28 @@ jobs:
     env:
       DATABASE_URL: postgresql://poc_user:ci_only_password@localhost:5432/migration_poc
 
-steps:
-  - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.13"
-      cache: pip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
 
-  - name: Install dependencies
-    run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-  - name: Apply migrations
-    run: alembic upgrade head
+      - name: Apply migrations
+        run: alembic upgrade head
 
-  - name: Migrations round-trip (downgrade to base, upgrade again)
-    run: alembic downgrade base && alembic upgrade head
+      - name: Migrations round-trip (downgrade to base, upgrade again)
+        run: alembic downgrade base && alembic upgrade head
 
-  - name: Generate synthetic dataset
-    run: python db/seed/generate_dataset.py
+      - name: Generate synthetic dataset
+        run: python db/seed/generate_dataset.py
 
-  - name: Backfill
-    run: python scripts/backfill.py
+      - name: Backfill
+        run: python scripts/backfill.py
 
-  - name: Reconcile against manifest
-    run: python scripts/reconcile.py
+      - name: Reconcile against manifest
+        run: python scripts/reconcile.py
