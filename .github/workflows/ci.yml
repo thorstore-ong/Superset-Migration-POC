@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  migrate-backfill-renconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: poc_user
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: migration_poc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U poc_user -d migration_poc"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://poc_user:ci_only_password@localhost:5432/migration_poc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply migrations
+        run: alembic upgrade head
+
+      - name: Migrations round-trip (downgrade to base, upgrade again)
+        run: alembic downgrade base && alembic upgrade head
+
+      - name: Generate synthetic dataset
+        run: python db/seed/generate_dataset.py
+
+      - name: Backfill
+        run: python scripts/backfill.py
+
+      - name: Reconcile against manifest
+        run: python scripts/reconcile.py
