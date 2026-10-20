@@ -17,7 +17,7 @@ jobs:
       db:
         image: postgres:16
         env:
-          POSTEGRES_USER: poc_user
+          POSTGRES_USER: poc_user
           POSTGRES_PASSWORD: ci_only_password
           POSTGRES_DB: migration_poc
         ports:
