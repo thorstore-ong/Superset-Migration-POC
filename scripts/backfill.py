@@ -5,14 +5,14 @@ import logging
 import os
 import sys
 import time
-import uuid   
+import uuid
 from collections import defaultdict
-from pathlib import Path
-from dotenv import load_dotenv
-import psycopg2
-
-from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+
+import psycopg2
+from dotenv import load_dotenv
 
 load_dotenv()
 CSV_PATH = Path(__file__).parent.parent / "db" / "seed" / "output" / "readings.csv"

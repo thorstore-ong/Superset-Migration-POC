@@ -133,7 +133,7 @@ def main():
     manifest["total_rows_written"] = len(rows)
 
     write_csv(OUTPUT_DIR / "sites.csv", ["id", "name", "region"],
-              [dict(zip(["id", "name", "region"], s)) for s in SITES])
+              [dict(zip(["id", "name", "region"], s, strict=True)) for s in SITES])
     write_csv(OUTPUT_DIR / "meters.csv", ["id", "site_id", "meter_type", "install_date"], METERS)
     write_csv(OUTPUT_DIR / "readings.csv", ["meter_id", "reading_ts", "kwh_value", "status"], rows)
     (OUTPUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2))
