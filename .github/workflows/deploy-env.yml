@@ -1,0 +1,66 @@
+name: Deploy to one environment (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: poc_user
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: migration_poc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U poc_user -d migration_poc"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://poc_user:ci_only_password@localhost:5432/migration_poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply migrations
+        run: alembic upgrade head
+
+      - name: Simulate a stricter schema in this environment (only if configured)
+        if: vars.STRICTER_SCHEMA == 'true'
+        run: |
+          python -c "
+          import os, psycopg2
+          conn = psycopg2.connect(os.environ['DATABASE_URL'])
+          conn.cursor().execute('ALTER TABLE readings ADD CONSTRAINT ck_env_kwh_max CHECK (kwh_value < 50)')
+          conn.commit()
+          "
+
+      - name: Generate synthetic dataset
+        run: python db/seed/generate_dataset.py
+
+      - name: Backfill
+        run: python scripts/backfill.py
+
+      - name: Reconcile against manifest
+        run: python scripts/reconcile.py
