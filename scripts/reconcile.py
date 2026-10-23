@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import psycopg2
-from dotenv  import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 MANIFEST_PATH = Path(__file__).parent.parent / "db" / "seed" / "output" / "manifest.json"
