@@ -14,10 +14,23 @@ services:
       - pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 5
+
+  superset:
+    build: ./superset
+    image: apache/superset:5.0.0
+    ports:
+    - "8089:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+    volumes:
+    - superset_home:/app/superset_home
+    depends_on:
+    - db
     
 volumes:
-  pgdata:     
+  pgdata:
+  superset_home: 
